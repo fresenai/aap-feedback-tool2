@@ -1,0 +1,888 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Syracuse University AAP Evaluation Tool</title>
+  <!-- Tailwind CSS for styling -->
+  <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+  <!-- React and ReactDOM -->
+  <script src="https://unpkg.com/react@17/umd/react.production.min.js"></script>
+  <script src="https://unpkg.com/react-dom@17/umd/react-dom.production.min.js"></script>
+  <!-- PapaParse for CSV handling -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.3.0/papaparse.min.js"></script>
+  <!-- Babel for JSX -->
+  <script src="https://unpkg.com/babel-standalone@6/babel.min.js"></script>
+</head>
+<body class="bg-gray-100">
+  <div id="root"></div>
+
+  <script type="text/babel">
+    const { useState, useEffect } = React;
+
+    // Main App Component
+    function App() {
+      return (
+        <div className="container mx-auto py-8 px-4">
+          <AutomatedAAPEvaluationInterface />
+        </div>
+      );
+    }
+
+    // AAP Evaluator Function
+    const AAPEvaluator = () => {
+      // Define the rubric criteria and scoring levels
+      const rubricCriteria = {
+        sustainingAssessment: {
+          name: 'Sustaining Assessment',
+          keyPhrases: {
+            exemplary: [
+              "faculty members provide input",
+              "faculty input",
+              "all faculty members",
+              "students are actively engaged",
+              "student participation",
+              "student engagement"
+            ],
+            meetsExpectations: [
+              "examined by faculty each academic year", 
+              "annual assessment", 
+              "documented",
+              "four-year assessment cycle",
+              "entire set of outcomes",
+              "results are shared",
+              "discussed and analyzed",
+              "committee",
+              "regular part",
+              "inform decision-making"
+            ],
+            developing: [
+              "partially met",
+              "some assessment",
+              "limited documentation",
+              "incomplete assessment"
+            ]
+          }
+        },
+        studentLearningOutcomes: {
+          name: 'Student Learning Outcomes',
+          keyPhrases: {
+            exemplary: [
+              "active verbs",
+              "measurable outcomes",
+              "challenging expectations",
+              "higher-level thinking"
+            ],
+            meetsExpectations: [
+              "clear statements",
+              "essential student learning outcomes",
+              "what students will be able to do",
+              "know, or produce",
+              "5-7 student learning outcomes",
+              "3-4 student learning outcomes",
+              "baccalaureate",
+              "master's",
+              "doctoral program",
+              "certificate",
+              "minor",
+              "aligned to the Shared Competencies"
+            ],
+            developing: [
+              "partially met",
+              "some outcomes",
+              "vague outcomes",
+              "unclear statements"
+            ]
+          }
+        },
+        curriculumMap: {
+          name: 'Curriculum Map',
+          keyPhrases: {
+            exemplary: [
+              "measures",
+              "potentially be used to examine",
+              "sufficient opportunities",
+              "strong program coherence"
+            ],
+            meetsExpectations: [
+              "curriculum map",
+              "University's scale",
+              "I=Introduce",
+              "R=Reinforce",
+              "M=Master",
+              "progression of learning",
+              "combination of I, R, and M"
+            ],
+            developing: [
+              "partially met",
+              "incomplete map",
+              "limited mapping"
+            ]
+          }
+        },
+        measures: {
+          name: 'Measures',
+          keyPhrases: {
+            exemplary: [
+              "two measures of student work",
+              "direct evidence",
+              "more than two measures",
+              "faculty observations",
+              "strengths and areas"
+            ],
+            meetsExpectations: [
+              "minimum of two measures",
+              "student work",
+              "clearly linked",
+              "description of each measure"
+            ],
+            developing: [
+              "partially met",
+              "single measure",
+              "unclear connection"
+            ]
+          }
+        },
+        criteria: {
+          name: 'Criteria',
+          keyPhrases: {
+            exemplary: [
+              "acceptable achievement",
+              "second one",
+              "proportion of students",
+              "exemplary work"
+            ],
+            meetsExpectations: [
+              "establish a criterion",
+              "performance level",
+              "minimally acceptable achievement",
+              "benchmark for success",
+              "reasonably set"
+            ],
+            developing: [
+              "partially met",
+              "vague criteria",
+              "unclear benchmarks"
+            ]
+          }
+        },
+        results: {
+          name: 'Results',
+          keyPhrases: {
+            exemplary: [
+              "exceeded",
+              "met",
+              "partially met",
+              "did not meet",
+              "number of students"
+            ],
+            meetsExpectations: [
+              "consistent with the measures",
+              "clearly summarized",
+              "results are disaggregated",
+              "meaningful to the program",
+              "improvement of learning outcomes",
+              "all students"
+            ],
+            developing: [
+              "partially met",
+              "incomplete results",
+              "limited analysis"
+            ]
+          }
+        },
+        interpretation: {
+          name: 'Interpretation',
+          keyPhrases: {
+            exemplary: [
+              "disaggregated results are discussed",
+              "compare results over",
+              "few years",
+              "consistency of findings",
+              "longitudinal analysis",
+              "impact of actions",
+              "explore other questions"
+            ],
+            meetsExpectations: [
+              "interpretation aligns with the results",
+              "comprehensively documented",
+              "strengths and areas",
+              "underperforming",
+              "disaggregating results",
+              "improvement",
+              "non-course-based measures"
+            ],
+            developing: [
+              "partially met",
+              "limited interpretation",
+              "minimal analysis"
+            ]
+          }
+        },
+        actionFollowUp: {
+          name: 'Action & Follow-Up',
+          keyPhrases: {
+            exemplary: [
+              "progress updates",
+              "identified and implemented",
+              "reassessed",
+              "determine the impact",
+              "action(s)"
+            ],
+            meetsExpectations: [
+              "based on results and interpretation",
+              "identify and implement actions",
+              "improve the academic program",
+              "assessment process",
+              "maintain assessment strategy"
+            ],
+            developing: [
+              "partially met",
+              "vague actions",
+              "limited follow-up"
+            ]
+          }
+        }
+      };
+
+      // Find matching phrases in text
+      const findMatches = (phrases, text) => {
+        const lowercaseText = text.toLowerCase();
+        return phrases.filter(phrase => lowercaseText.includes(phrase.toLowerCase()));
+      };
+
+      // Evaluate a single criterion
+      const evaluateCriterion = (criterionId, criterion, documentText) => {
+        // Default to "Not Evident" (score 1) if no evidence is found
+        let score = 1;
+        let comment = `No evidence found for ${criterion.name}.`;
+        
+        // Check for key phrases in descending order of scores
+        const { exemplary, meetsExpectations, developing } = criterion.keyPhrases;
+        
+        // Track matches for comment generation
+        const matches = {
+          exemplary: findMatches(exemplary, documentText),
+          meetsExpectations: findMatches(meetsExpectations, documentText),
+          developing: findMatches(developing, documentText)
+        };
+        
+        // Determine score based on matches
+        if (matches.exemplary.length > 0 && matches.meetsExpectations.length >= 3) {
+          score = 4; // Exemplary
+          comment = `Exemplary: ${matches.exemplary.join(", ")}. Meets expectations: ${matches.meetsExpectations.join(", ")}.`;
+        } else if (matches.meetsExpectations.length >= 3) {
+          score = 3; // Meets Expectations
+          comment = `Meets expectations: ${matches.meetsExpectations.join(", ")}.`;
+        } else if (matches.developing.length > 0 || matches.meetsExpectations.length > 0) {
+          score = 2; // Developing
+          comment = `Developing: Found some evidence but criteria only partially met.`;
+          if (matches.developing.length > 0) {
+            comment += ` Evidence: ${matches.developing.join(", ")}`;
+          }
+          if (matches.meetsExpectations.length > 0) {
+            comment += ` Partial meets: ${matches.meetsExpectations.join(", ")}`;
+          }
+        }
+        
+        return { score, comment };
+      };
+
+      // Determine overall rating based on average score
+      const determineOverallRating = (average) => {
+        if (average >= 3.5) return 'Exemplary';
+        if (average >= 2.5) return 'Meets Expectations';
+        if (average >= 1.5) return 'Developing';
+        return 'Not Evident';
+      };
+
+      // Get qualitative assessment based on average score
+      const getOverallAssessment = (averageScore) => {
+        if (averageScore >= 3.5) {
+          return "is exemplary and demonstrates a robust, well-implemented assessment process";
+        } else if (averageScore >= 2.5) {
+          return "meets expectations and provides a solid foundation for program assessment";
+        } else if (averageScore >= 1.5) {
+          return "is developing and shows progress toward an effective assessment process, but needs further refinement";
+        } else {
+          return "needs significant improvement to establish an effective assessment process";
+        }
+      };
+
+      // Generate overall comments based on scores and criterion comments
+      const generateOverallComments = (scores, comments, criteria) => {
+        const strengths = [];
+        const areasForImprovement = [];
+        
+        // Identify strengths (scores 3-4) and areas for improvement (scores 1-2)
+        for (const [criterionId, score] of Object.entries(scores)) {
+          const criterionName = criteria[criterionId].name;
+          
+          if (score >= 3) {
+            strengths.push(`${criterionName} (${score}/4)`);
+          } else {
+            areasForImprovement.push(`${criterionName} (${score}/4)`);
+          }
+        }
+        
+        let overallComments = "";
+        
+        // Add strength summary
+        if (strengths.length > 0) {
+          overallComments += `Strengths: This assessment and action plan demonstrates strong performance in ${strengths.join(', ')}. `;
+        }
+        
+        // Add improvement summary
+        if (areasForImprovement.length > 0) {
+          overallComments += `Areas for improvement: The assessment would benefit from further development in ${areasForImprovement.join(', ')}. `;
+        }
+        
+        // Add overall assessment
+        const averageScore = Object.values(scores).reduce((sum, score) => sum + score, 0) / Object.keys(scores).length;
+        overallComments += `\n\nOverall, this assessment and action plan ${getOverallAssessment(averageScore)}.`;
+        
+        return overallComments;
+      };
+
+      // Main method to evaluate an AAP document
+      const evaluateAAP = (documentText, programName) => {
+        const scores = {};
+        const comments = {};
+        
+        // Evaluate each criterion
+        for (const [criterionId, criterion] of Object.entries(rubricCriteria)) {
+          const { score, comment } = evaluateCriterion(criterionId, criterion, documentText);
+          scores[criterionId] = score;
+          comments[criterionId] = comment;
+        }
+        
+        // Calculate overall metrics
+        const totalScore = Object.values(scores).reduce((sum, score) => sum + score, 0);
+        const averageScore = (totalScore / Object.keys(scores).length).toFixed(2);
+        const overallRating = determineOverallRating(parseFloat(averageScore));
+        
+        // Generate overall comments
+        const overallComments = generateOverallComments(scores, comments, rubricCriteria);
+        
+        // Prepare the results object
+        return {
+          programName,
+          evaluationDate: new Date().toLocaleDateString(),
+          scores,
+          totalScore,
+          averageScore,
+          overallRating,
+          criterionComments: comments,
+          overallComments
+        };
+      };
+
+      return {
+        rubricCriteria,
+        evaluateAAP
+      };
+    };
+
+    // Main Interface Component
+    const AutomatedAAPEvaluationInterface = () => {
+      const [activeTab, setActiveTab] = useState('upload');
+      const [programName, setProgramName] = useState('');
+      const [documentText, setDocumentText] = useState('');
+      const [isProcessing, setIsProcessing] = useState(false);
+      const [currentEvaluation, setCurrentEvaluation] = useState(null);
+      const [evaluations, setEvaluations] = useState([]);
+      const [fileMode, setFileMode] = useState('paste'); // 'paste' or 'upload'
+      const [uploadedFile, setUploadedFile] = useState(null);
+      const [batchFiles, setBatchFiles] = useState([]);
+      
+      // Create evaluator instance
+      const evaluator = AAPEvaluator();
+
+      // Load saved evaluations from localStorage on component mount
+      useEffect(() => {
+        const savedEvaluations = localStorage.getItem('aapEvaluations');
+        if (savedEvaluations) {
+          try {
+            setEvaluations(JSON.parse(savedEvaluations));
+          } catch (error) {
+            console.error('Error loading saved evaluations:', error);
+          }
+        }
+      }, []);
+
+      // Save evaluations to localStorage whenever they change
+      useEffect(() => {
+        if (evaluations.length > 0) {
+          localStorage.setItem('aapEvaluations', JSON.stringify(evaluations));
+        }
+      }, [evaluations]);
+
+      // Process uploaded file
+      const handleFileUpload = (event) => {
+        const file = event.target.files[0];
+        if (file) {
+          setUploadedFile(file);
+          const reader = new FileReader();
+          reader.onload = (e) => {
+            setDocumentText(e.target.result);
+          };
+          reader.readAsText(file);
+        }
+      };
+
+      // Handle batch file uploads
+      const handleBatchUpload = (event) => {
+        const files = Array.from(event.target.files);
+        setBatchFiles(files);
+      };
+
+      // Process a single AAP
+      const processAAP = () => {
+        if (!programName.trim()) {
+          alert('Please enter a program name');
+          return;
+        }
+
+        if (!documentText.trim()) {
+          alert('Please provide the AAP document text');
+          return;
+        }
+
+        setIsProcessing(true);
+        
+        try {
+          // Process the AAP document
+          const evaluation = evaluator.evaluateAAP(documentText, programName);
+          
+          // Add unique ID
+          evaluation.id = Date.now().toString();
+          
+          // Update state
+          setCurrentEvaluation(evaluation);
+          setEvaluations([...evaluations, evaluation]);
+          
+          // Reset form and switch to results tab
+          setProgramName('');
+          setDocumentText('');
+          setUploadedFile(null);
+          setActiveTab('results');
+        } catch (error) {
+          console.error('Error processing AAP:', error);
+          alert('An error occurred while processing the AAP. Please try again.');
+        } finally {
+          setIsProcessing(false);
+        }
+      };
+
+      // Process batch files
+      const processBatch = async () => {
+        if (batchFiles.length === 0) {
+          alert('Please upload at least one file for batch processing');
+          return;
+        }
+
+        setIsProcessing(true);
+        
+        try {
+          const newEvaluations = [];
+          
+          for (const file of batchFiles) {
+            // Extract program name from filename
+            const fileName = file.name;
+            const programName = fileName.split('.')[0].replace(/_/g, ' ');
+            
+            // Read file content
+            const text = await readFileAsText(file);
+            
+            // Process the AAP
+            const evaluation = evaluator.evaluateAAP(text, programName);
+            evaluation.id = Date.now() + Math.random().toString(36).substring(2, 9);
+            
+            // Add to evaluations list
+            newEvaluations.push(evaluation);
+          }
+          
+          // Update state with all new evaluations
+          setEvaluations([...evaluations, ...newEvaluations]);
+          
+          // Switch to results tab
+          setActiveTab('results');
+          
+          // Clear batch files
+          setBatchFiles([]);
+          
+          alert(`Successfully processed ${newEvaluations.length} AAP documents`);
+        } catch (error) {
+          console.error('Error in batch processing:', error);
+          alert('An error occurred during batch processing. Please try again.');
+        } finally {
+          setIsProcessing(false);
+        }
+      };
+      
+      // Helper function to read file as text
+      const readFileAsText = (file) => {
+        return new Promise((resolve, reject) => {
+          const reader = new FileReader();
+          reader.onload = (e) => resolve(e.target.result);
+          reader.onerror = reject;
+          reader.readAsText(file);
+        });
+      };
+
+      // Export evaluations to CSV
+      const exportToCSV = () => {
+        if (evaluations.length === 0) {
+          alert('No evaluations to export');
+          return;
+        }
+        
+        // Define CSV header
+        const headers = [
+          "Program Name",
+          "Evaluation Date",
+          "Average Score",
+          "Overall Rating",
+          "Sustaining Assessment",
+          "Student Learning Outcomes",
+          "Curriculum Map",
+          "Measures",
+          "Criteria",
+          "Results",
+          "Interpretation",
+          "Action & Follow-Up",
+          "Overall Comments"
+        ];
+        
+        // Create CSV rows
+        const rows = evaluations.map(eval => [
+          eval.programName,
+          eval.evaluationDate,
+          eval.averageScore,
+          eval.overallRating,
+          eval.scores.sustainingAssessment,
+          eval.scores.studentLearningOutcomes,
+          eval.scores.curriculumMap,
+          eval.scores.measures,
+          eval.scores.criteria,
+          eval.scores.results,
+          eval.scores.interpretation,
+          eval.scores.actionFollowUp,
+          `"${eval.overallComments.replace(/"/g, '""')}"`
+        ]);
+        
+        // Combine header and rows
+        const csvContent = [
+          headers.join(','),
+          ...rows.map(row => row.join(','))
+        ].join('\n');
+        
+        // Create and download CSV file
+        const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = url;
+        link.setAttribute('download', 'AAP_Evaluations.csv');
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+      };
+
+      // Delete an evaluation
+      const deleteEvaluation = (id) => {
+        if (confirm('Are you sure you want to delete this evaluation?')) {
+          const updatedEvaluations = evaluations.filter(eval => eval.id !== id);
+          setEvaluations(updatedEvaluations);
+          if (currentEvaluation && currentEvaluation.id === id) {
+            setCurrentEvaluation(null);
+          }
+        }
+      };
+      
+      // Get level label based on score
+      const getLevelLabel = (score) => {
+        switch (score) {
+          case 4: return 'Exemplary';
+          case 3: return 'Meets Expectations';
+          case 2: return 'Developing';
+          case 1: return 'Not Evident';
+          default: return 'Unknown';
+        }
+      };
+
+      // Get CSS class for score level
+      const getScoreClass = (score) => {
+        switch (score) {
+          case 4: return 'bg-green-100 text-green-800';
+          case 3: return 'bg-blue-100 text-blue-800';
+          case 2: return 'bg-yellow-100 text-yellow-800';
+          case 1: return 'bg-red-100 text-red-800';
+          default: return 'bg-gray-100';
+        }
+      };
+
+      return (
+        <div className="w-full max-w-4xl mx-auto p-4">
+          <div className="bg-white shadow-md rounded-lg p-6 mb-6">
+            <h1 className="text-2xl font-bold mb-2">Syracuse University</h1>
+            <h2 className="text-xl font-semibold mb-2">Automated AAP Evaluation System</h2>
+            <p className="text-gray-500">
+              This system automatically analyzes and grades Assessment and Action Plans using 
+              Syracuse University's academic program assessment rubric.
+            </p>
+          </div>
+
+          <div className="flex mb-4">
+            <button 
+              className={`px-4 py-2 rounded-tl-lg rounded-bl-lg ${activeTab === 'upload' ? 'bg-orange-500 text-white' : 'bg-gray-200'}`} 
+              onClick={() => setActiveTab('upload')}
+            >
+              Upload & Process
+            </button>
+            <button 
+              className={`px-4 py-2 ${activeTab === 'batch' ? 'bg-orange-500 text-white' : 'bg-gray-200'}`}
+              onClick={() => setActiveTab('batch')}
+            >
+              Batch Processing
+            </button>
+            <button 
+              className={`px-4 py-2 rounded-tr-lg rounded-br-lg ${activeTab === 'results' ? 'bg-orange-500 text-white' : 'bg-gray-200'}`}
+              onClick={() => setActiveTab('results')}
+            >
+              Results
+            </button>
+          </div>
+          
+          {activeTab === 'upload' && (
+            <div className="bg-white shadow-md rounded-lg p-6">
+              <h2 className="text-xl font-semibold mb-4">Upload AAP Document</h2>
+              
+              <div className="mb-4">
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Program Name
+                </label>
+                <input 
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md" 
+                  placeholder="Enter program name" 
+                  value={programName}
+                  onChange={(e) => setProgramName(e.target.value)}
+                />
+              </div>
+              
+              <div className="mb-4">
+                <div className="flex mb-2">
+                  <button
+                    className={`px-3 py-1 text-sm rounded-l-md ${fileMode === 'paste' ? 'bg-orange-500 text-white' : 'bg-gray-200'}`}
+                    onClick={() => setFileMode('paste')}
+                  >
+                    Paste Text
+                  </button>
+                  <button
+                    className={`px-3 py-1 text-sm rounded-r-md ${fileMode === 'upload' ? 'bg-orange-500 text-white' : 'bg-gray-200'}`}
+                    onClick={() => setFileMode('upload')}
+                  >
+                    Upload File
+                  </button>
+                </div>
+                
+                {fileMode === 'paste' ? (
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      AAP Document Text
+                    </label>
+                    <textarea
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md h-64"
+                      placeholder="Paste the content of the Assessment and Action Plan document here..."
+                      value={documentText}
+                      onChange={(e) => setDocumentText(e.target.value)}
+                    />
+                  </div>
+                ) : (
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Upload AAP Document File
+                    </label>
+                    <input
+                      type="file"
+                      accept=".txt,.doc,.docx,.pdf,.rtf"
+                      onChange={handleFileUpload}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md"
+                    />
+                    {uploadedFile && (
+                      <div className="mt-2 text-sm text-gray-500">
+                        Uploaded file: {uploadedFile.name}
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+              
+              <button 
+                onClick={processAAP}
+                disabled={isProcessing}
+                className={`w-full py-2 rounded-md ${isProcessing ? 'bg-gray-400' : 'bg-orange-500 text-white hover:bg-orange-600'}`}
+              >
+                {isProcessing ? 'Processing...' : 'Evaluate AAP Document'}
+              </button>
+            </div>
+          )}
+          
+          {activeTab === 'batch' && (
+            <div className="bg-white shadow-md rounded-lg p-6">
+              <h2 className="text-xl font-semibold mb-4">Batch Process Multiple AAPs</h2>
+              
+              <div className="mb-4">
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Upload Multiple AAP Documents
+                </label>
+                <p className="text-sm text-gray-500 mb-2">
+                  Program names will be extracted from filenames. Use underscore instead of spaces in filenames (e.g., Computer_Science.txt).
+                </p>
+                <input
+                  type="file"
+                  accept=".txt,.doc,.docx,.pdf,.rtf"
+                  multiple
+                  onChange={handleBatchUpload}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md"
+                />
+              </div>
+              
+              {batchFiles.length > 0 && (
+                <div className="mb-4">
+                  <h3 className="text-md font-medium mb-2">Selected Files ({batchFiles.length})</h3>
+                  <ul className="max-h-32 overflow-y-auto border border-gray-200 rounded-md p-2">
+                    {batchFiles.map((file, index) => (
+                      <li key={index} className="text-sm text-gray-700 mb-1">
+                        {file.name}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+              
+              <button 
+                onClick={processBatch}
+                disabled={isProcessing || batchFiles.length === 0}
+                className={`w-full py-2 rounded-md ${isProcessing || batchFiles.length === 0 ? 'bg-gray-400' : 'bg-orange-500 text-white hover:bg-orange-600'}`}
+              >
+                {isProcessing ? 'Processing...' : `Process ${batchFiles.length} AAP Documents`}
+              </button>
+            </div>
+          )}
+          
+          {activeTab === 'results' && (
+            <div className="bg-white shadow-md rounded-lg p-6">
+              <div className="flex justify-between items-center mb-4">
+                <h2 className="text-xl font-semibold">Evaluation Results</h2>
+                <button 
+                  onClick={exportToCSV}
+                  disabled={evaluations.length === 0}
+                  className={`px-4 py-2 rounded-md ${evaluations.length === 0 ? 'bg-gray-300 text-gray-500' : 'bg-orange-500 text-white hover:bg-orange-600'}`}
+                >
+                  Export to CSV
+                </button>
+              </div>
+              
+              {evaluations.length > 0 ? (
+                <div>
+                  <table className="w-full border-collapse mb-6">
+                    <thead>
+                      <tr className="bg-gray-100">
+                        <th className="px-4 py-2 text-left border">Program</th>
+                        <th className="px-4 py-2 text-left border">Date</th>
+                        <th className="px-4 py-2 text-left border">Avg. Score</th>
+                        <th className="px-4 py-2 text-left border">Rating</th>
+                        <th className="px-4 py-2 text-left border">Actions</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {evaluations.map((eval) => (
+                        <tr key={eval.id || eval.programName}>
+                          <td className="px-4 py-2 border">{eval.programName}</td>
+                          <td className="px-4 py-2 border">{eval.evaluationDate}</td>
+                          <td className="px-4 py-2 border">{eval.averageScore}</td>
+                          <td className="px-4 py-2 border font-medium">{eval.overallRating}</td>
+                          <td className="px-4 py-2 border">
+                            <button 
+                              onClick={() => setCurrentEvaluation(eval)} 
+                              className="text-blue-500 hover:underline mr-2"
+                            >
+                              View
+                            </button>
+                            <button 
+                              onClick={() => deleteEvaluation(eval.id)} 
+                              className="text-red-500 hover:underline"
+                            >
+                              Delete
+                            </button>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                  
+                  {currentEvaluation && (
+                    <div className="border border-gray-200 rounded-md p-4">
+                      <h3 className="text-lg font-medium mb-3">
+                        {currentEvaluation.programName} - Detailed Evaluation
+                      </h3>
+                      
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                        {Object.entries(currentEvaluation.scores).map(([criterionId, score]) => {
+                          const criterionName = evaluator.rubricCriteria[criterionId].name;
+                          return (
+                            <div key={criterionId} className="border border-gray-200 rounded p-3">
+                              <div className="flex justify-between items-center mb-1">
+                                <span className="font-medium">{criterionName}</span>
+                                <span className={`text-sm px-2 py-1 rounded ${getScoreClass(score)}`}>
+                                  {score}/4 - {getLevelLabel(score)}
+                                </span>
+                              </div>
+                              <p className="text-sm text-gray-600">
+                                {currentEvaluation.criterionComments[criterionId]}
+                              </p>
+                            </div>
+                          );
+                        })}
+                      </div>
+                      
+                      <div className="bg-gray-50 p-4 rounded-md mb-4">
+                        <h4 className="font-medium mb-2">Overall Assessment</h4>
+                        <div className="whitespace-pre-line text-gray-700">
+                          {currentEvaluation.overallComments}
+                        </div>
+                      </div>
+                      
+                      <div className="flex justify-between items-center">
+                        <div>
+                          <span className="font-medium">Total Score: </span>
+                          <span>{currentEvaluation.totalScore}/32</span>
+                        </div>
+                        <div>
+                          <span className="font-medium">Average: </span>
+                          <span>{currentEvaluation.averageScore}/4</span>
+                        </div>
+                        <div>
+                          <span className="font-medium">Rating: </span>
+                          <span className="font-bold">{currentEvaluation.overallRating}</span>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              ) : (
+                <div className="text-center py-6 text-gray-500">
+                  No evaluations yet. Process an AAP document to see results here.
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+      );
+    };
+
+    // Render the App component to the root element
+    ReactDOM.render(<App />, document.getElementById('root'));
+  </script>
+</body>
+</html>
